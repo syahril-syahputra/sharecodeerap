@@ -1,0 +1,211 @@
+<!DOCTYPE html>
+<head>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <style>
+        body,html{
+            min-height:100vh;
+            padding:0;
+            margin:0;
+            box-sizing: border-box;
+        }
+        *{
+            box-sizing: border-box;
+        }
+        .full-height-vh{
+            min-height:100vh;
+        }
+        .blue-border{
+            background: linear-gradient(180deg, #6EB6FB 0%, #429CF3 100%);
+        }
+        .display-flex{
+            display: flex;
+        }
+
+        .v-center{
+            align-items: center;
+        }
+        .h-center{
+            justify-content: center;
+        }
+
+        .padding-20{
+            padding-left:20px;
+            padding-right:20px;
+        }
+
+        .notif-box{
+            width:100%;
+            max-width:900px;
+            background: #FFFFFF;
+            border-radius: 16px;
+            padding: 40px 315px;
+            position: relative;
+        }
+
+        .text-center{
+            text-align: center;
+        }
+
+        .title{
+            font-family: 'Exo';
+            font-style: normal;
+            font-weight: 700;
+            font-size: 24px;
+            line-height: 32px;
+            color: #333333;
+            padding-bottom: 4px;
+        }
+        .text{
+            font-family: 'Exo';
+            font-style: normal;
+            font-weight: 500;
+            font-size: 16px;
+            line-height: 21px;
+        }
+        .padding-bottom-4{
+            padding-bottom:16px;
+        }
+        .padding-bottom-8{
+            padding-bottom:8px;
+        }
+        .padding-bottom-16{
+            padding-bottom:16px;
+        }
+
+        .button{
+            display: inline-block;
+            text-align:center;
+            white-space: nowrap;
+            line-height: 1;
+            background: #6EB6FB;
+            box-shadow: 0px 4px 0px #45A0F1;
+            border-radius: 40px;
+            padding:12px 24px;
+            color:#ffffff;
+            text-decoration: none !important;
+            appearance: none;
+            -webkit-appearance: none;
+            -moz-appearance: none;
+            border:none !important;
+            outline: none !important;
+            cursor: pointer;
+        }
+
+        .button span{
+            font-family: 'Exo';
+            font-style: normal;
+            font-weight: 700;
+            font-size: 24px;
+            text-decoration: none !important;
+            text-align: center;
+            color: #FFFFFF;
+            text-shadow: 1.77778px 1.77778px 3.55556px #5D9DE9;
+        }
+
+        .image-responsive{
+            max-width: 100%;
+        }
+
+        .padding-top-48{
+            padding-top:48px
+        }
+
+        .text-left{
+            text-align: left;;
+        }
+
+        .footer-notif table tr:not(last-of-type) td{
+            padding-bottom:8px;
+        }
+
+        .padding-right-16{
+            padding-right: 16px;
+        }
+
+        .checkbox-view + div{
+            display:none;
+        }
+
+        .checkbox-view:checked + div{
+            display:block;
+        }
+
+
+        @media(min-width:768px){
+            .notif-qr{
+                margin-left:-50px;
+                margin-right:-50px;
+            }
+        }
+
+
+        @media(max-width:991px){
+            .notif-box{
+                padding:24px 180px;
+            }
+        }
+
+        @media(max-width:767px){
+            .notif-box{
+                padding:24px 39px;
+            }
+            .back{
+                left:24px;
+                top:24px;
+            }
+        }
+        @media(max-width:320px){
+            .notif-box{
+                padding:16px 8px;
+            }
+            .button{
+                padding:8px 12px;
+            }
+            .button span{
+                font-size: 18px;
+            }
+            .padding-right-16{
+                padding-right: 8px;;
+            }
+            .back{
+                left:24px;
+                top:24px;
+            }
+
+        }
+    </style>
+    <base href="/" />
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Exo&family=Jost&display=swap" rel="stylesheet">
+</head>
+<body>
+<section id="section1" class="padding-20 display-flex v-center h-center full-height-vh blue-border">
+    <div class="notif-box">
+        <div class="notif-holder notif-thankyou text-center section1">
+            <div class="logo padding-bottom-16"><img src="public/logo.svg" class="image-responsive"></div>
+<!--            <div class="title padding-bottom-4" style="font-family: 'Exo', sans-serif;;">Welcome to Eureka</div>-->
+            <div class="text padding-bottom-16"><%= message %></div>
+
+<!--            <div class="title padding-bottom-16"></div>-->
+<!--            <div><button class="button" onclick="showSection1('section2')"><span>Start Your Journey</span></button></div>-->
+        </div>
+        <div class="display-flex h-center footer-notif padding-top-48">
+            <table class="text-left">
+                <tr>
+                    <td class="padding-right-16"><img src="public/web.svg" class="image-responsive"></td>
+                    <td>Visit us on <a href="https://hi-eureka.com">hi-eureka.com</a></td>
+                </tr>
+                <tr>
+                    <td class="padding-right-16"><img src="public/email.svg" class="image-responsive"></td>
+                    <td>Email us <a href="mailto:help@hi-eureka.com">help@hi-eureka.com</a></td>
+                </tr>
+            </table>
+        </div>
+    </div>
+</section>
+<script src="https://ajax.googleapis.com/ajax/libs/jquery/3.7.0/jquery.min.js"></script>
+<script>
+    
+</script>
+</body>

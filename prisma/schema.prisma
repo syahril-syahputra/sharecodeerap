@@ -1,0 +1,1040 @@
+generator client {
+  provider        = "prisma-client-js"
+  previewFeatures = ["selectRelationCount", "referentialActions", "interactiveTransactions"]
+}
+
+datasource db {
+  provider          = "mysql"
+  url               = env("DATABASE_URL")
+  shadowDatabaseUrl = env("SHADOW_DATABASE_URL")
+}
+
+model Language {
+  id                 Int                   @id @default(autoincrement())
+  createdAt          DateTime              @default(now())
+  updatedAt          DateTime              @default(now())
+  iso                String                @unique(map: "Language.iso")
+  name               String
+  User               User[]
+  DefaultPrompts     DefaultPrompt[]
+  Faq                Faq[]
+  PredefinedQuestion PredefinedQuestions[]
+}
+
+model Social {
+  id      Int     @id @default(autoincrement())
+  name    String
+  name_fr String?
+  name_ct String?
+  name_es String?
+  name_id String?
+  name_cn String?
+
+  UserSocial UserSocial[]
+}
+
+model UserSocial {
+  id       Int    @id @default(autoincrement())
+  social   Social @relation(fields: [socialId], references: [id], onDelete: Cascade)
+  socialId Int
+  user     User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+  userId   Int
+}
+
+model Account {
+  id        Int      @id @default(autoincrement())
+  createdAt DateTime @default(now())
+  updatedAt DateTime @default(now())
+  status    Int
+  User      User[]
+
+  // Stripe
+  // Customer Object
+  customerId     String?
+  email          String?
+  canonicalEmail String?        @unique(map: "Account.canonicalEmail_unique")
+  name           String?
+  currency       String?
+  isDev          Boolean?
+  paymentSource  PaymentSource? @default(STRIPE)
+
+  // Plan
+  planId Int?
+  Plan   Plan? @relation(fields: [planId], references: [id])
+
+  // Subscription
+  subscriptionDefaultPaymentMethod String?
+  subscriptionCreatedAt            DateTime?
+  subscriptionId                   String?
+  subscriptionStatus               String?
+  subscriptionCurrentPeriodStart   DateTime?
+  subscriptionCurrentPeriodEnd     DateTime?
+  transactionId                    String?
+  cancel_at                        DateTime?
+  cancel_at_period_end             Boolean?
+  canceled_at                      DateTime?
+  appleReceipt                     String?   @db.Text
+
+  lastActivity DateTime?
+
+  Product            Product?             @relation(fields: [productId], references: [id])
+  productId          Int?
+  Mail               MailLog[]
+  TransactionHistory TransactionHistory[]
+}
+
+enum PaymentSource {
+  STRIPE
+  APPLE
+  GOOGLE
+  FORCE_EXPIRED
+  CUSTOMIZE_TOKEN
+  CUSTOMIZE_EXP_DATE
+}
+
+model Country {
+  id            Int             @id @default(autoincrement())
+  code          String?
+  name          String?
+  imageUrl      String?
+  DefaultPrompt DefaultPrompt[]
+  Poi           Poi[]
+}
+
+model User {
+  id                  Int            @id @default(autoincrement())
+  createdAt           DateTime       @default(now())
+  updatedAt           DateTime       @default(now())
+  email               String?
+  pin                 Int?
+  account             Account        @relation(fields: [accountId], references: [id], onDelete: Cascade, map: "User_ibfk_1")
+  accountId           Int
+  canonicalEmail      String?        @unique(map: "User.canonicalEmail_unique")
+  firstname           String?
+  lastname            String?
+  password            String?
+  passwordReset       String?
+  resetToken          String?        @unique(map: "User.resetToken_unique")
+  resetTokenExpires   DateTime?
+  isAdmin             Boolean
+  verified            Boolean        @default(false)
+  lastLogin           DateTime?
+  lastInteraction     DateTime?
+  interests           String?        @db.LongText
+  personalInformation String?        @db.LongText
+  Session             Session[]
+  Language            Language?      @relation(fields: [languageId], references: [id])
+  languageId          Int?
+  birthday            DateTime?
+  UserLevel           UserLevel?     @relation(fields: [userLevelId], references: [id])
+  userLevelId         Int?
+  points              Int            @default(0)
+  questionAsked       Int            @default(0)
+  voiceCode           String?
+  talkMethod          String?
+  country             String?
+  device              String?
+  UserSocial          UserSocial[]
+  fcmToken            String?
+  timezone            String?
+
+  dailyRecap     Boolean @default(false)
+  dailyRecapMail Boolean @default(false)
+
+  weeklyRecap     Boolean @default(false)
+  weeklyRecapMail Boolean @default(false)
+
+  feedbackReminder Boolean @default(false)
+  trialReminder    Boolean @default(false)
+
+  isJoinNewsletter Boolean   @default(false)
+  joinNewsletterAt DateTime?
+
+  inviteToken        String?   @unique(map: "User.inviteToken_unique")
+  inviteTokenExpires DateTime?
+
+  loginPin          Int?
+  loginToken        String?
+  loginTokenExpires DateTime?
+
+  Mail     MailLog[]
+  Log      Log[]
+  Quiz     Quiz[]
+  Prompt   Prompt[]
+  Waitlist Waitlist[]
+
+  InviteLink            InviteLink?             @relation(fields: [inviteLinkId], references: [id])
+  inviteLinkId          Int?
+  SavedStory            SavedStory[]
+  UserNotificationTopic UserNotificationTopic[]
+
+  threadId String?
+
+  @@index([accountId], map: "accountId")
+}
+
+model Session {
+  id              Int            @id @default(autoincrement())
+  createdAt       DateTime       @default(now())
+  updatedAt       DateTime       @default(now())
+  endedAt         DateTime?
+  user            User           @relation(fields: [userId], references: [id], onDelete: Cascade)
+  userId          Int
+  processed       Boolean        @default(false)
+  DefaultPrompt   DefaultPrompt? @relation(fields: [DefaultPromptId], references: [id])
+  DefaultPromptId Int?
+  Prompts         Prompt[]
+  processedPrompt Json?
+}
+
+model Prompt {
+  id              Int         @id @default(autoincrement())
+  createdAt       DateTime    @default(now())
+  session         Session?    @relation(fields: [sessionId], references: [id], onDelete: Cascade)
+  sessionId       Int?
+  request         String      @db.LongText
+  response        String?     @db.LongText
+  responseTime    Int?
+  promptToken     Int?
+  completionToken Int?
+  totalTokens     Int?
+  type            PromptType? @default(DEFAULT)
+  funFacts        FunFact[]   @relation("promptFunFacts")
+  promptParent    Prompt?     @relation("promptChildren", fields: [promptParentId], references: [id])
+  promptParentId  Int?
+  relatedPrompts  Prompt[]    @relation("promptChildren")
+  user            User        @relation(fields: [userId], references: [id], onDelete: Cascade)
+  userId          Int
+
+  metadataToken   String?
+  DefaultPrompt   DefaultPrompt? @relation(fields: [defaultPromptId], references: [id])
+  defaultPromptId Int?
+
+  deletedAt  DateTime?
+  deleted    Boolean?
+  reported   Boolean?
+  reportedAt DateTime?
+
+  isCorrect      Boolean?     @default(true)
+  funFactsScore  Int?
+  learnMoreScore Int?
+  StoryTopics    StoryTopic[]
+  topicId        Int?
+  Topic          Topic?       @relation(fields: [topicId], references: [id])
+  Quiz           Quiz[]
+  Log            Log[]
+  image          String?      @db.LongText
+
+  sttEngine String?
+  ttsEngine String?
+  llmEngine String?
+
+  quizEntry   QuizEntry? @relation("QuizEntry", fields: [quizEntryId], references: [id])
+  quizEntryId Int?
+
+  fullRequest           String?               @db.LongText
+  SavedStory            SavedStory[]
+  ContinousSavedStory   ContinousSavedStory[]
+  PromptStoryTopics     PromptStoryTopic[]    @relation("PromptStoryTopics")
+  FromPromptStoryTopics PromptStoryTopic[]    @relation("FromPromptStoryTopics")
+  Context               PromptContext?
+}
+
+model PromptContext {
+  id       Int     @id @default(autoincrement())
+  context  String?
+  emoji    String?
+  title    String?
+  Prompt   Prompt  @relation(fields: [promptId], references: [id])
+  promptId Int     @unique
+}
+
+enum PromptType {
+  DEFAULT
+  DEFAULT_METADATA
+  EXPLAIN_MORE
+  FUN_FACTS
+  QUIZ
+  STORY
+  FACT
+  QUIZ_EXPLAIN_MORE
+  PREDEFINED_QUESTION
+  CUSTOM_STORY
+  CUSTOM_TOKEN
+  IDLE
+  DALLE
+}
+
+model FunFact {
+  id       Int    @id @default(autoincrement())
+  prompt   Prompt @relation("promptFunFacts", fields: [promptId], references: [id], onDelete: Cascade)
+  promptId Int
+  fact     String @db.LongText
+}
+
+model UserLevel {
+  id      Int     @id @default(autoincrement())
+  tier    Int     @unique(map: "UserLevel.tier")
+  name    String
+  name_fr String?
+  name_ct String?
+  name_es String?
+  name_id String?
+  name_cn String?
+
+  points Int
+
+  User     User[]
+  Topic    Topic[]
+  Activity Activity[]
+}
+
+model AdminUser {
+  id             Int             @id @default(autoincrement())
+  firstName      String
+  lastName       String
+  email          String
+  canonicalEmail String?         @unique(map: "AdminUser.canonicalEmail_unique")
+  password       String?
+  DefaultPrompt  DefaultPrompt[]
+  OpenAIParams   OpenAIParams[]
+  Waitlist       Waitlist[]
+  Poi            Poi[]
+  TypeOfStory    TypeOfStory[]
+  AdminQuery     AdminQuery[]
+}
+
+model DefaultPrompt {
+  id                      Int           @id @default(autoincrement())
+  createdAt               DateTime      @default(now())
+  updatedAt               DateTime      @default(now())
+  name                    String
+  inUse                   Boolean
+  createdBy               AdminUser     @relation(fields: [createdById], references: [id], onDelete: Cascade)
+  createdById             Int
+  language                Language?     @relation(fields: [languageId], references: [id])
+  languageId              Int?
+  minAge                  Int           @default(0)
+  maxAge                  Int           @default(10)
+  country                 Country?      @relation(fields: [countryId], references: [id])
+  countryId               Int?
+  mainParams              OpenAIParams? @relation(name: "MainParams", fields: [mainParamsId], references: [id])
+  mainParamsId            Int?
+  explainMoreParams       OpenAIParams? @relation(name: "ExplainMoreParams", fields: [explainMoreParamsId], references: [id])
+  explainMoreParamsId     Int?
+  spellMoreParams         OpenAIParams? @relation(name: "SpellMoreParams", fields: [spellMoreParamsId], references: [id])
+  spellMoreParamsId       Int?
+  funFactsParams          OpenAIParams? @relation(name: "FunFactsParams", fields: [funFactsParamsId], references: [id])
+  funFactsParamsId        Int?
+  metadataParams          OpenAIParams? @relation(name: "MetadataParams", fields: [metadataParamsId], references: [id])
+  metadataParamsId        Int?
+  storyParams             OpenAIParams? @relation(name: "StoryParams", fields: [storyParamsId], references: [id])
+  storyParamsId           Int?
+  quizParams              OpenAIParams? @relation(name: "QuizParams", fields: [quizParamsId], references: [id])
+  quizParamsId            Int?
+  quizPromptParams        OpenAIParams? @relation(name: "QuizPromptParams", fields: [quizPromptParamsId], references: [id])
+  quizPromptParamsId      Int?
+  factParams              OpenAIParams? @relation(name: "FactParams", fields: [factParamsId], references: [id])
+  factParamsId            Int?
+  quizExplainMoreParams   OpenAIParams? @relation(name: "QuizExplainMoreParams", fields: [quizExplainMoreParamsId], references: [id])
+  quizExplainMoreParamsId Int?
+  customStoryParams       OpenAIParams? @relation(name: "CustomStoryParams", fields: [customStoryParamsId], references: [id])
+  customStoryParamsId     Int?
+  continuePromptParams    OpenAIParams? @relation(name: "ContinuePromptParams", fields: [continuePromptParamsId], references: [id])
+  continuePromptParamsId  Int?
+  IdleParams              OpenAIParams? @relation(name: "IdleParams", fields: [IdleParamsId], references: [id])
+  IdleParamsId            Int?
+  dalleParams             OpenAIParams? @relation(name: "DalleParams", fields: [dalleParamsId], references: [id])
+  dalleParamsId           Int?
+  contextParams           OpenAIParams? @relation(name: "ContextParams", fields: [contextParamsId], references: [id])
+  contextParamsId         Int?
+  emojisParams            OpenAIParams? @relation(name: "EmojisParams", fields: [emojisParamsId], references: [id])
+  emojisParamsId          Int?
+  Sessions                Session[]
+  Prompt                  Prompt[]
+  OpenAIParams            OpenAIParams? @relation(fields: [openAIParamsId], references: [id])
+  openAIParamsId          Int?
+}
+
+model OpenAIParams {
+  id               Int       @id @default(autoincrement())
+  createdAt        DateTime  @default(now())
+  updatedAt        DateTime  @default(now())
+  name             String
+  temperature      Float
+  topP             Float
+  frequencyPenalty Float
+  presencePenalty  Float
+  bestOf           Int
+  maxTokens        Int
+  createdBy        AdminUser @relation(fields: [createdById], references: [id], onDelete: Cascade)
+  createdById      Int
+
+  systemPrompt    String? @db.Text
+  prompt          String? @db.Text
+  userPrompt      String? @db.Text
+  assistantPrompt String? @db.Text
+
+  mainParams            DefaultPrompt[] @relation(name: "MainParams")
+  explainMoreParams     DefaultPrompt[] @relation(name: "ExplainMoreParams")
+  spellMoreParams       DefaultPrompt[] @relation(name: "SpellMoreParams")
+  funFactsParams        DefaultPrompt[] @relation(name: "FunFactsParams")
+  metadataParams        DefaultPrompt[] @relation(name: "MetadataParams")
+  storyParams           DefaultPrompt[] @relation(name: "StoryParams")
+  quizParams            DefaultPrompt[] @relation(name: "QuizParams")
+  quizPromptParams      DefaultPrompt[] @relation(name: "QuizPromptParams")
+  factParams            DefaultPrompt[] @relation(name: "FactParams")
+  quizExplainMoreParams DefaultPrompt[] @relation(name: "CustomStoryParams")
+  customStoryParams     DefaultPrompt[] @relation(name: "QuizExplainMoreParams")
+  continuePromptParams  DefaultPrompt[] @relation(name: "ContinuePromptParams")
+  idleParams            DefaultPrompt[] @relation(name: "IdleParams")
+  dalleParams           DefaultPrompt[] @relation(name: "DalleParams")
+  contextParams         DefaultPrompt[] @relation(name: "ContextParams")
+  emojisParams          DefaultPrompt[] @relation(name: "EmojisParams")
+
+  Engine   Engine? @relation(fields: [engineId], references: [id])
+  engineId Int?
+
+  DefaultPrompt DefaultPrompt[]
+}
+
+enum EngineVendor {
+  GPT
+  GROQ
+}
+
+model Engine {
+  id           Int            @id @default(autoincrement())
+  model        String
+  engineVendor EngineVendor?
+  OpenAIParams OpenAIParams[]
+  SystemPrompt SystemPrompt[]
+}
+
+model Concept {
+  id           Int            @id @default(autoincrement())
+  name         String
+  description  String
+  ConceptImage ConceptImage[]
+}
+
+model ConceptImage {
+  id        Int     @id @default(autoincrement())
+  concept   Concept @relation(fields: [conceptId], references: [id], onDelete: Cascade)
+  conceptId Int
+  image     String
+  thumb     String
+}
+
+// Plans
+model Product {
+  id            Int          @id @default(autoincrement())
+  stripeId      String       @unique(map: "Product.stripe_unique")
+  name          String
+  default_price String
+  tokens        Int
+  default       Boolean?
+  active        Boolean
+  created       DateTime
+  updated       DateTime
+  description   String       @db.Text
+  livemode      Boolean
+  tax_code      String
+  type          String
+  url           String?
+  Prices        Price[]
+  Account       Account[]
+  InviteLink    InviteLink[]
+}
+
+// Plans prices, separated because is how Stripe works, and is easier then for us with the webhooks
+model Price {
+  id              Int      @id @default(autoincrement())
+  stripeId        String   @unique(map: "Price.stripe_unique")
+  productStripeId String
+  currency        String?
+  unit_amount     Int?
+  Product         Product? @relation(fields: [productId], references: [id], onDelete: Cascade)
+  productId       Int?
+}
+
+model Plan {
+  id             Int          @id @default(autoincrement())
+  name           String?
+  description    String?
+  identifier     String?
+  tokens         Int?
+  subscriptionId String?
+  type           PlanType?
+  trialPeriod    TrialPeriod?
+  Account        Account[]
+}
+
+enum PlanType {
+  MONTHLY
+  YEARLY
+}
+
+enum TrialPeriod {
+  THREEDAYS
+  SEVENDAYS
+}
+
+model Activity {
+  id          Int     @id @default(autoincrement())
+  name        String
+  name_fr     String?
+  name_ct     String?
+  name_es     String?
+  name_id     String?
+  name_cn     String?
+  imageId     String?
+  imageUrl    String?
+  userLevelId Int?
+
+  UserLevel           UserLevel?            @relation(fields: [userLevelId], references: [id])
+  Topic               Topic[]
+  StoryParamsActivity StoryParamsActivity[]
+}
+
+model Topic {
+  id                    Int                     @id @default(autoincrement())
+  name                  String
+  name_fr               String?
+  name_ct               String?
+  name_es               String?
+  name_id               String?
+  name_cn               String?
+  imageId               String?
+  imageUrl              String?                 @db.LongText
+  Activity              Activity?               @relation(fields: [activityId], references: [id], onDelete: Cascade)
+  activityId            Int?
+  StoryTopics           StoryTopic[]
+  Prompts               Prompt[]
+  Quiz                  Quiz[]
+  PredefinedQuestions   PredefinedQuestions[]
+  UserLevel             UserLevel?              @relation(fields: [userLevelId], references: [id])
+  userLevelId           Int?
+  SavedStoryParamsTopic SavedStoryParamsTopic[]
+}
+
+model StoryTopic {
+  id       Int    @id @default(autoincrement())
+  prompt   Prompt @relation(fields: [promptId], references: [id], onDelete: Cascade)
+  promptId Int
+  topic    Topic  @relation(fields: [topicId], references: [id], onDelete: Cascade)
+  topicId  Int
+
+  @@unique([promptId, topicId])
+}
+
+model PromptStoryTopic {
+  id            Int    @id @default(autoincrement())
+  prompt        Prompt @relation(name: "PromptStoryTopics", fields: [promptId], references: [id], onDelete: Cascade)
+  promptId      Int
+  topicPrompt   Prompt @relation(name: "FromPromptStoryTopics", fields: [topicPromptId], references: [id], onDelete: Cascade)
+  topicPromptId Int
+
+  @@unique([promptId, topicPromptId])
+}
+
+model Quiz {
+  id           Int         @id @default(autoincrement())
+  createdAt    DateTime    @default(now())
+  topic        Topic?      @relation(fields: [topicId], references: [id])
+  topicId      Int?
+  QuizEntry    QuizEntry[]
+  prompt       Prompt      @relation(fields: [promptId], references: [id], onDelete: Cascade)
+  promptId     Int
+  promptFromId Int?
+  emoji        String?
+  user         User        @relation(fields: [userId], references: [id], onDelete: Cascade)
+  userId       Int
+  finished     Boolean     @default(false)
+}
+
+model QuizEntry {
+  id            Int       @id @default(autoincrement())
+  createdAt     DateTime  @default(now())
+  repliedAt     DateTime?
+  isCorrect     Boolean?
+  quiz          Quiz      @relation(fields: [quizId], references: [id], onDelete: Cascade)
+  quizId        Int
+  question      String
+  correctAnswer Boolean?
+  Prompt        Prompt[]  @relation(name: "QuizEntry")
+}
+
+model Log {
+  id        Int      @id @default(autoincrement())
+  message   String?
+  createdAt DateTime @default(now())
+  type      LogType?
+  User      User?    @relation(fields: [userId], references: [id], onDelete: Cascade)
+  userId    Int?
+  Prompt    Prompt?  @relation(fields: [promptId], references: [id], onDelete: Cascade)
+  promptId  Int?
+}
+
+enum LogType {
+  REGISTER
+  LOGIN
+  LOGOUT
+  CONFIRM_EMAIL
+  CONFIRM_RESEND
+  GPT
+  GPT_EXPLAIN_MORE
+  GPT_FUN_FACT
+  GPT_FACT
+  TTS
+  GET_ACCOUNT
+  GET_ACCOUNT_USAGE
+  GET_ACTIVITIES
+  GET_ALL_TOPICS
+  GET_LEVELS
+  GET_LANGUAGES
+  GET_POIS
+  GET_PRODUCTS
+  GET_PROFILE
+  GET_FAQS
+  GET_PROMPTS
+  GET_PROMPTS_BY_QUERY
+  GET_SOCIALS
+  GET_TOPICS_BY_ACTIVITY
+  GET_USERS
+  GET_QUIZZES
+  GET_ONE_QUIZZES
+  CREATE_SUBSCRIPTION
+  CREATE_PORTAL_SESSION
+  CREATE_USER
+  EDIT_USER
+  SET_USER_ADMIN
+  DELETE_PROMPT
+  DELETE_USER
+  INVITE_USER
+  INVITE_USER_CONFIRM
+  ANSWER_QUIZ
+  REPORT_PROMPT
+  GPT_METADATA
+  PREDEFINED_QUESTION
+  USER_OPENED_APP
+}
+
+model Waitlist {
+  id                 Int           @id @default(autoincrement())
+  email              String?
+  status             WaitlistType?
+  inviteToken        String?       @unique(map: "waitlist.inviteToken_unique")
+  inviteTokenExpires DateTime?
+  createdAt          DateTime      @default(now())
+  invitedAt          DateTime?
+  invitedBy          AdminUser?    @relation(fields: [invitedById], references: [id], onDelete: Cascade)
+  invitedById        Int?
+  redeemedAt         DateTime?
+  beforeExpiredMail  Boolean       @default(false)
+  expiredMail        Boolean       @default(false)
+  User               User?         @relation(fields: [userId], references: [id])
+  userId             Int?
+}
+
+enum WaitlistType {
+  NOT_INVITED
+  INVITED
+  REDEEMED
+  REDEEMED_7DAYS
+}
+
+model ErrorLog {
+  id           Int      @id @default(autoincrement())
+  message      String?
+  description  String?  @db.LongText
+  responseTime Int?
+  createdAt    DateTime @default(now())
+  type         String?
+}
+
+model Faq {
+  id         Int       @id @default(autoincrement())
+  question   String?
+  answer     String?   @db.Text
+  createdAt  DateTime  @default(now())
+  Language   Language? @relation(fields: [languageId], references: [id])
+  languageId Int?
+}
+
+model MailLog {
+  id        Int          @id @default(autoincrement())
+  message   String?
+  userId    Int?
+  accountId Int?
+  type      MailLogType?
+  createdAt DateTime     @default(now())
+  Account   Account?     @relation(fields: [accountId], references: [id], onDelete: Cascade)
+  User      User?        @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+
+enum MailLogType {
+  WAITLIST
+  NEWSLETTER
+  TRIAL
+  FEEDBACK
+  DAILY_RECAP
+  WEEKLY_RECAP
+  INVITE_USER
+  LOGIN_PIN
+  NEW_PLAN
+  SUBSCRIPTION_DELETE
+  SUBSCRIPTION_PAID_USER
+  CUSTOMER_CREATED
+}
+
+model VoiceLanguage {
+  id                Int      @id @default(autoincrement())
+  voice_code        String?
+  voice_name        String?
+  voice_public_made Boolean? @default(false)
+  language_code     String?
+  default           Boolean  @default(false)
+  image             String?
+}
+
+model InviteLink {
+  id                   Int      @id @default(autoincrement())
+  slug                 String   @unique(map: "invitelink.slug_unique")
+  successCallbackUrl   String?
+  inviteExpires        DateTime
+  allowedNumberOfUsers Int
+  numDaysTrial         Int?
+  createdAt            DateTime @default(now())
+  Product              Product  @relation(fields: [productId], references: [id])
+  productId            Int
+  User                 User[]
+}
+
+model Poi {
+  id            Int          @id @default(autoincrement())
+  createdAt     DateTime     @default(now())
+  updatedAt     DateTime     @updatedAt
+  name          String
+  latitude      Float        @db.Double
+  longitude     Float        @db.Double
+  Category      PoiCategory  @relation(fields: [categoryId], references: [id])
+  categoryId    Int
+  description   String       @db.Text
+  Country       Country      @relation(fields: [countryId], references: [id])
+  countryId     Int
+  unsplashId    String?      @db.Text
+  image         String?      @db.Text
+  validatedAt   DateTime?
+  validatedBy   AdminUser?   @relation(fields: [validatedById], references: [id])
+  validatedById Int?
+  generatedAt   DateTime?
+  PoiLocation   PoiLocation? @relation(fields: [poiLocationId], references: [id])
+  poiLocationId Int?
+}
+
+model PoiCategory {
+  id        Int     @id @default(autoincrement())
+  name      String? @unique(map: "poi.category_unique")
+  shortname String?
+  imageUrl  String?
+  Poi       Poi[]
+}
+
+model PoiLocation {
+  id          Int    @id @default(autoincrement())
+  geoCodeName String
+  publicName  String
+  latitude    Float  @db.Double
+  longitude   Float  @db.Double
+  Poi         Poi[]
+}
+
+model PoiImage {
+  id             Int      @id @default(autoincrement())
+  createdAt      DateTime @default(now())
+  shutterstockId String
+  name           String
+  licenseId      String
+  publicUrl      String
+  key            String
+}
+
+enum STT_Type {
+  MOBILE_APP
+  GROQ_WHISPER
+  DEEPGRAM_API
+}
+
+enum TTS_TYPE {
+  MOBILE_APP
+  GOOGLE
+  ELEVEN_LABS
+  DEEPGRAM_API
+}
+
+model Settings {
+  id      Int       @id @default(autoincrement())
+  status  Boolean?  @default(false)
+  name    String?   @unique
+  value   String?
+  sttType STT_Type?
+  ttsType TTS_TYPE?
+  voice   String?
+  model   String?
+}
+
+model PredefinedQuestions {
+  id         Int    @id @default(autoincrement())
+  topicId    Int?
+  ageRangeId Int?
+  languageId Int?
+  question   String
+
+  Language Language? @relation(fields: [languageId], references: [id])
+  AgeRange AgeRange? @relation(fields: [ageRangeId], references: [id])
+  Topic    Topic?    @relation(fields: [topicId], references: [id])
+}
+
+model AgeRange {
+  id     Int @id @default(autoincrement())
+  minAge Int
+  maxAge Int
+
+  PredefinedQuestions PredefinedQuestions[]
+}
+
+model StoryParams {
+  id        Int               @id @default(autoincrement())
+  createdAt DateTime          @default(now())
+  name      String?
+  type      TypeOfStoryparam?
+  name_fr   String?
+  name_es   String?
+  name_id   String?
+  name_cn   String?
+  name_ct   String?
+  imageUrl  String?           @db.LongText
+
+  StoryParamsType       StoryParamsType[]
+  StoryParamsActivity   StoryParamsActivity[]
+  SavedStoryParamsTopic SavedStoryParamsTopic[]
+}
+
+enum TypeOfStoryparam {
+  WHO
+  WHERE
+  OBJECT
+  LOCATIONS
+  WHEN
+  HOW
+  WHY
+}
+
+model StoryParamsActivity {
+  id           Int      @id @default(autoincrement())
+  createdAt    DateTime @default(now())
+  activityId   Int?
+  storyParamId Int?
+  active       Boolean? @default(false)
+
+  Activity   Activity?    @relation(fields: [activityId], references: [id])
+  StoryParam StoryParams? @relation(fields: [storyParamId], references: [id])
+}
+
+model TypeOfStory {
+  id        Int        @id @default(autoincrement())
+  createdAt DateTime   @default(now())
+  type      TypeOfTOS?
+
+  name    String
+  name_fr String?
+  name_es String?
+  name_id String?
+  name_cn String?
+  name_ct String?
+
+  imageUrl  String? @db.LongText
+  userLevel Int?
+
+  createdBy       Int?
+  Creator         AdminUser?        @relation(fields: [createdBy], references: [id])
+  SavedStory      SavedStory[]
+  StoryParamsType StoryParamsType[]
+}
+
+enum TypeOfTOS {
+  SIMPLE
+  INTERACTIVE
+}
+
+model SavedStory {
+  id        Int      @id @default(autoincrement())
+  createdAt DateTime @default(now())
+  title     String?
+
+  typeOfStoryId Int?
+  promptId      Int?
+  userId        Int?
+
+  User                  User?                   @relation(fields: [userId], references: [id])
+  TypeOfStory           TypeOfStory?            @relation(fields: [typeOfStoryId], references: [id])
+  Prompt                Prompt?                 @relation(fields: [promptId], references: [id])
+  SavedStoryParamsTopic SavedStoryParamsTopic[]
+  ContinousSavedStory   ContinousSavedStory[]
+}
+
+model SavedStoryParamsTopic {
+  id           Int      @id @default(autoincrement())
+  createdAt    DateTime @default(now())
+  topicId      Int?
+  storyParamId Int?
+  savedStoryId Int?
+
+  SavedStory SavedStory?  @relation(fields: [savedStoryId], references: [id], onDelete: Cascade)
+  Topic      Topic?       @relation(fields: [topicId], references: [id], onDelete: Cascade)
+  StoryParam StoryParams? @relation(fields: [storyParamId], references: [id], onDelete: Cascade)
+}
+
+model StoryParamsType {
+  id            Int          @id @default(autoincrement())
+  createdAt     DateTime     @default(now())
+  active        Boolean?
+  storyParamId  Int?
+  typeOfStoryId Int?
+  StoryParam    StoryParams? @relation(references: [id], fields: [storyParamId])
+  TypeOfStory   TypeOfStory? @relation(references: [id], fields: [typeOfStoryId])
+}
+
+model ContinousSavedStory {
+  id           Int      @id @default(autoincrement())
+  createdAt    DateTime @default(now())
+  savedStoryId Int?
+  promptId     Int?
+
+  SavedStory SavedStory? @relation(fields: [savedStoryId], references: [id], onDelete: Cascade)
+  Prompt     Prompt?     @relation(fields: [promptId], references: [id], onDelete: Cascade)
+}
+
+model Notifications {
+  id                  Int                @id @default(autoincrement())
+  createdAt           DateTime           @default(now())
+  title               String?
+  title_fr            String?
+  title_es            String?
+  title_id            String?
+  title_cn            String?
+  title_ct            String?
+  body                String?
+  body_fr             String?
+  body_es             String?
+  body_id             String?
+  body_cn             String?
+  body_ct             String?
+  time                DateTime?
+  scheduled           Boolean?           @default(false)
+  sent                Boolean?           @default(false)
+  Topic               NotificationTopic? @relation(fields: [notificationTopicId], references: [id], onDelete: Cascade)
+  notificationTopicId Int?
+}
+
+model NotificationTopic {
+  id                    Int                     @id @default(autoincrement())
+  createdAt             DateTime                @default(now())
+  name                  String?
+  tagName               String?
+  Notifications         Notifications[]
+  UserNotificationTopic UserNotificationTopic[]
+}
+
+model UserNotificationTopic {
+  id                  Int      @id @default(autoincrement())
+  createdAt           DateTime @default(now())
+  userId              Int?
+  notificationTopicId Int?
+  active              Boolean?
+
+  User              User?              @relation(fields: [userId], references: [id])
+  NotificationTopic NotificationTopic? @relation(fields: [notificationTopicId], references: [id])
+}
+
+model AdminQuery {
+  id          Int                   @id @default(autoincrement())
+  createdAt   DateTime              @default(now())
+  name        String?
+  rawSQL      String?
+  isSQL       Boolean?              @default(true)
+  userTarget  Int?
+  userAdminId Int
+  AdminUser   AdminUser             @relation(fields: [userAdminId], references: [id], onDelete: Cascade)
+  Condition   AdminQueryCondition[]
+}
+
+model AdminQueryCondition {
+  id         Int         @id @default(autoincrement())
+  queryId    Int?
+  field      String?
+  condition  String?
+  value      String?
+  AdminQuery AdminQuery? @relation(fields: [queryId], references: [id], onDelete: Cascade)
+}
+
+model OpenAiTTSModel {
+  id        Int              @id @default(autoincrement())
+  createdAt DateTime         @default(now())
+  voice     OpenAiVoiceType? @unique
+  inUse     Boolean          @default(false)
+}
+
+model OnboardingEmails {
+  id        Int      @id @default(autoincrement())
+  createdAt DateTime @default(now())
+  email     String?
+}
+
+enum OpenAiVoiceType {
+  ALLOY
+  ECHO
+  FABLE
+  ONYX
+  NOVA
+  SHIMMER
+}
+
+model AbandonedEmail {
+  id        Int      @id @default(autoincrement())
+  createdAt DateTime @default(now())
+
+  email  String?
+  device String?
+}
+
+model TransactionHistory {
+  id        Int            @id @default(autoincrement())
+  createdAt DateTime       @default(now())
+  data      String?        @db.LongText
+  type      PaymentSource?
+  accountId Int?
+  Account   Account?       @relation(fields: [accountId], references: [id], onDelete: Cascade)
+}
+
+enum SystemPromptType {
+  CLOSE_DEFAULT_SESSION
+  CLOSE_SESSION_PERSONAL_INFORMATION
+  DAILY_RECAP
+}
+
+model SystemPrompt {
+  id               Int              @id @default(autoincrement())
+  prompt           String           @db.LongText
+  Engine           Engine?          @relation(fields: [engineId], references: [id])
+  engineId         Int?
+  description      String?
+  temperature      Float?
+  topP             Float?
+  frequencyPenalty Float?
+  presencePenalty  Float?
+  bestOf           Int?
+  maxTokens        Int?
+  type             SystemPromptType @unique
+}

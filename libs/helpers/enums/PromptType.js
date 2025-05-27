@@ -1,0 +1,15 @@
+const PromptTypes = {
+    DEFAULT: 'DEFAULT',
+    DEFAULT_METADATA: 'DEFAULT_METADATA',
+    EXPLAIN_MORE: 'EXPLAIN_MORE',
+    FUN_FACTS: 'FUN_FACTS',
+    QUIZ: 'QUIZ',
+    STORY: 'STORY',
+    FACT: 'FACT',
+    QUIZ_EXPLAIN_MORE: 'QUIZ_EXPLAIN_MORE',
+    PREDEFINED_QUESTION: 'PREDEFINED_QUESTION',
+    IDLE: 'IDLE',
+    DALLE: 'DALLE',
+};
+
+module.exports = PromptTypes;
